@@ -12,26 +12,28 @@ func main() {
 }
 
 func input() MonteCarlo {
-	var Xmin float64
-	var Xmax float64
-	var Ymin float64
-	var Ymax float64
-	var N int
+	//var Xmin float64
+	//var Xmax float64
+	//var Ymin float64
+	//var Ymax float64
+	//var N int
 
-	fmt.Print("Введите через пробел Xmin, Xmax, Ymin, Ymax, N: ")
-	fmt.Scan(&Xmin, &Xmax, &Ymin, &Ymax, &N)
+	//fmt.Print("Введите через пробел Xmin, Xmax, Ymin, Ymax, N: ")
+	//fmt.Scan(&Xmin, &Xmax, &Ymin, &Ymax, &N)
 
-	return newMonteCarlo(Xmin, Xmax, Ymin, Ymax, N)
+	return newMonteCarlo( 0, 4, 0, 1, 5000)
+	//return newMonteCarlo(Xmin, Xmax, Ymin, Ymax, N)
 }
 
 func (mc *MonteCarlo) startAlgorithm() float64 {
 	wg := new(sync.WaitGroup)
-	wg.Add(mc.N)
 	for i := 1; i <= mc.N; i++ {
+		wg.Add(1)
 		go mc.genPoints(i, wg)
 	}
 	wg.Wait()
-
+	fmt.Println(mc.N)
+	fmt.Println(len(mc.Points))
 	return mc.getIntegral()
 }
 
@@ -67,6 +69,9 @@ func newMonteCarlo(Xmin float64, Xmax float64, Ymin float64, Ymax float64, N int
 
 func (mc *MonteCarlo) genPoints(value int, wg *sync.WaitGroup) {
 	defer wg.Done()
+	mc.PointsMutex.Lock()
+	defer mc.PointsMutex.Unlock()
+
 	Xcoord := mc.Xcoord()
 	Ycoord := mc.Ycoord()
 	Fx := f(Xcoord)
