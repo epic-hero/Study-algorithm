@@ -1,9 +1,13 @@
 package main
 
-import "sync"
-import "fmt"
-import "sort"
-//import "math"
+import (
+	"fmt"
+	"math"
+	"sort"
+	"sync"
+)
+
+const MaxInt = math.MaxInt32
 
 type Graph struct {
 	Graph   [][]int
@@ -77,23 +81,24 @@ func (graph *Graph) findAndSetMinElem(edge Edge, i int, wg *sync.WaitGroup) {
 
 	indexMin, minValue := graph.getMinEdge(graph.Graph[i])
 
-	edge.VertexStart = i
-	edge.VertexFinish = indexMin
-	edge.Weight = minValue
-	// Изначально каждое ребро лежит в разных Компонентах связности
-	edge.Group = graph.GroupId
-	graph.GroupId++
-	graph.Edges.Edge = append(graph.Edges.Edge, edge)
-	graph.Graph[i][indexMin] = 0
+	if minValue != MaxInt {
+		edge.VertexStart = i
+		edge.VertexFinish = indexMin
+		edge.Weight = minValue
+		// Изначально каждое ребро лежит в разных Компонентах связности
+		edge.Group = graph.GroupId
+		graph.GroupId++
+		graph.Edges.Edge = append(graph.Edges.Edge, edge)
+		graph.Graph[i][indexMin] = 0
+	}
 }
 
 // Берем у вершины миниммальное ребро и позицию
 func (graph *Graph) getMinEdge(array []int) (int, int) {
-	//var min int = int(math.Inf(2))
-	var min int = 9999999
+	var min int = MaxInt
 	var i int
 	for index, value := range array {
-		if value > 0 && min > value {
+		if value != 0 && min > value {
 			min = value
 			i = index
 		}
@@ -108,53 +113,44 @@ func (graph *Graph) addVertexInMST(mst *MST) {
 }
 
 func (mst *MST) joinEdgeMST(edgeInput Edge) {
-	isExistVertexStart := false
-	isExistVertexFinish := false
-	group1 := -1
-	group2 := -1
-	for _, edge := range mst.Edge {
-		//Убираем дублирование вершин
-		if edgeInput.VertexFinish == edge.VertexFinish && edgeInput.VertexStart == edge.VertexStart {
-			isExistVertexStart = true
-			isExistVertexFinish = true
-			continue
-		}
-		// Есть ли в MST вершина равное НАЧАЛЬНОЙ вершине текущего ребра
-		if edge.VertexStart == edgeInput.VertexStart || edge.VertexStart == edgeInput.VertexFinish {
-			if group2 == -1 {
-				group2 = edge.Group
-			} else if group1 == -1 {
-				group1 = edge.Group
-			}
-			if isExistVertexFinish == false {
-				isExistVertexFinish = true
-			} else if isExistVertexStart == false {
-				isExistVertexStart = true
-			}
-		}
-		// Есть ли в MST вершина равное КОНЕЧНОЙ вершине текущего ребра
-		if edge.VertexFinish == edgeInput.VertexStart || edge.VertexFinish == edgeInput.VertexFinish {
-			if isExistVertexFinish == false {
-				isExistVertexFinish = true
-			} else if isExistVertexStart == false {
-				isExistVertexStart = true
-			}
-			if group2 == -1 {
-				group2 = edge.Group
-			} else if group1 == -1 {
-				group1 = edge.Group
-			}
-		}
-	}
-
-	if len(mst.Edge) == 0 || (((group1 != group2) &&
-		isExistVertexStart == true && isExistVertexFinish == true) ||
-		(isExistVertexStart == true && isExistVertexFinish == false) ||
-		(isExistVertexStart == false && isExistVertexFinish == true) ||
-		(isExistVertexStart == false && isExistVertexFinish == false)) {
+	isLoop, group1, group2 := mst.createLoop(edgeInput)
+	if len(mst.Edge) == 0 || (mst.createDuplicate(edgeInput) == false && isLoop == false) {
 		mst.joinGroup(group1, group2, edgeInput.Group)
 		mst.Edge = append(mst.Edge, edgeInput)
 	}
+}
+
+func (mst *MST) createDuplicate(edgeInput Edge) bool {
+	for _, edgeMST := range mst.Edge {
+		if (edgeMST.VertexStart == edgeInput.VertexStart && edgeMST.VertexFinish == edgeInput.VertexFinish) ||
+			(edgeMST.VertexStart == edgeInput.VertexFinish && edgeMST.VertexFinish == edgeInput.VertexStart) {
+			return true
+		}
+	}
+	return false
+}
+
+func (mst *MST) createLoop(edgeInput Edge) (bool, int, int) {
+	existInMstVertexStart := false
+	existInMstVertexFinish := false
+	group1 := -1
+	group2 := -1
+	for _, edgeMST := range mst.Edge {
+		//Если начальная точка edgeInput есть в MST
+		if edgeInput.VertexStart == edgeMST.VertexStart || edgeInput.VertexStart == edgeMST.VertexFinish {
+			group1 = edgeMST.Group
+			existInMstVertexStart = true
+		}
+		//Если конечная точка edgeInput есть в MST
+		if edgeInput.VertexFinish == edgeMST.VertexStart || edgeInput.VertexFinish == edgeMST.VertexFinish {
+			group2 = edgeMST.Group
+			existInMstVertexFinish = true
+		}
+	}
+	if existInMstVertexStart == true && existInMstVertexFinish ==true && group1 == group2{
+		return true, group1, group2
+	}
+	return false, group1, group2
 }
 
 func (mst *MST) joinGroup(groupIdForUpdate int, group2 int, groupIdReference int) {
