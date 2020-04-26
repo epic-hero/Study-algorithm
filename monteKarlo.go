@@ -12,17 +12,7 @@ func main() {
 }
 
 func input() MonteCarlo {
-	//var Xmin float64
-	//var Xmax float64
-	//var Ymin float64
-	//var Ymax float64
-	//var N int
-
-	//fmt.Print("Введите через пробел Xmin, Xmax, Ymin, Ymax, N: ")
-	//fmt.Scan(&Xmin, &Xmax, &Ymin, &Ymax, &N)
-
 	return newMonteCarlo( 0, 4, 0, 1, 5000)
-	//return newMonteCarlo(Xmin, Xmax, Ymin, Ymax, N)
 }
 
 func (mc *MonteCarlo) startAlgorithm() float64 {
@@ -32,8 +22,6 @@ func (mc *MonteCarlo) startAlgorithm() float64 {
 		go mc.genPoints(i, wg)
 	}
 	wg.Wait()
-	fmt.Println(mc.N)
-	fmt.Println(len(mc.Points))
 	return mc.getIntegral()
 }
 
